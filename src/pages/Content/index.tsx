@@ -45,17 +45,19 @@ class ContentScript {
     console.log('Working... kind of');
   }
 
-  private setAction() {
+  private async setAction() {
     // Refactor
 
     setTimeout(() => {
       this.addGptButton();
-    }, 3000);
+    }, 1000);
+
+    let dynamicElement: any;
 
     if (window.location.href !== this.currentUrl) {
       this.currentUrl = window.location.href;
     } else if (window.location.href.includes('chat.openai.com')) {
-      this.pasteGptPrompt();
+      await this.pasteGptPrompt();
     }
   }
 
@@ -76,20 +78,80 @@ class ContentScript {
     });
   }
 
-  private pasteGptPrompt() {
-    chrome.runtime.sendMessage({ type: 'GET_PROMPT' }, (response) => {
-      setTimeout(() => {
-        const promptArea = document.getElementById(
-          'prompt-textarea'
-        ) as HTMLTextAreaElement;
+  private async pasteGptPrompt(): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      function simulateTyping(
+        text: string,
+        targetElement: HTMLTextAreaElement
+      ) {
+        return new Promise<void>((resolve, reject) => {
+          async function typeCharacter(char: string, index: number) {
+            setTimeout(function () {
+              targetElement.value += char;
 
-        if (promptArea) {
-          setTimeout(() => {
-            promptArea.value = response;
-            // chrome.runtime.sendMessage({ type: 'CLEAR_TEXT' });
-          }, 1000);
-        }
-      }, 1000);
+              targetElement.dispatchEvent(
+                new KeyboardEvent('keydown', {
+                  key: char,
+                  keyCode: char.charCodeAt(0),
+                  code: `Key${char.toUpperCase()}`,
+                })
+              );
+
+              targetElement.dispatchEvent(
+                new KeyboardEvent('keypress', {
+                  key: char,
+                  keyCode: char.charCodeAt(0),
+                  code: `Key${char.toUpperCase()}`,
+                })
+              );
+
+              targetElement.dispatchEvent(
+                new KeyboardEvent('input', { bubbles: true })
+              );
+
+              setTimeout(function () {
+                targetElement.dispatchEvent(
+                  new KeyboardEvent('keyup', {
+                    key: char,
+                    keyCode: char.charCodeAt(0),
+                    code: `Key${char.toUpperCase()}`,
+                  })
+                );
+              }, 10);
+
+              if (index + 1 < text.length) {
+                typeCharacter(text[index + 1], index + 1);
+              } else {
+                resolve(); // Resolve the promise when typing is complete
+              }
+            }, 10);
+          }
+
+          typeCharacter(text[0], 0);
+        });
+      }
+
+      chrome.runtime.sendMessage({ type: 'GET_PROMPT' }, (response) => {
+        setTimeout(() => {
+          const promptArea = document.getElementById(
+            'prompt-textarea'
+          ) as HTMLTextAreaElement;
+
+          if (promptArea) {
+            setTimeout(async () => {
+              await simulateTyping(response, promptArea);
+              // chrome.runtime.sendMessage({ type: 'CLEAR_TEXT' });
+              setTimeout(() => {
+                let x: any = document.getElementsByClassName(
+                  'absolute bottom-1.5 right-2 rounded-lg border border-black bg-black p-0.5 text-white transition-colors enabled:bg-black disabled:text-gray-400 disabled:opacity-10 dark:border-white dark:bg-white dark:hover:bg-white md:bottom-3 md:right-3'
+                )[0];
+                x.click();
+                resolve(); // Resolve the outer promise when everything is complete
+              }, 100);
+            }, 1000);
+          }
+        }, 1000);
+      });
     });
   }
 
@@ -123,9 +185,11 @@ class ContentScript {
       }
 
       this.gptButton.addEventListener('click', () => {
+        console.log('clicked');
+        // You can also send a message to the background script if needed
         chrome.runtime.sendMessage({
           type: 'GPT_BUTTON_CLICKED',
-          text: 'placeholder text',
+          text: 'whats 9+10?',
         });
       });
     }
@@ -133,7 +197,7 @@ class ContentScript {
 
   private sendGptPrompt() {
     // Open a new tab with your target URL
-    const newTab = window.open('https://chat.openai.com/', '_blank');
+    // const newTab = window.open('https://chat.openai.com/', '_blank');
   }
 }
 
