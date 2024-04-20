@@ -17,9 +17,17 @@ class BackgroundScript {
   sendChatgptPrompt() {
     this.getActiveTabInformation((tab) => {
       if (tab) {
-        chrome.tabs.sendMessage(tab.id, {
-          type: 'NEW_PROMPT',
-        });
+        // Open an invisible tab
+        chrome.tabs.create(
+          { url: 'https://chat.openai.com', active: true },
+          (tab) => {
+            // Perform actions on the newly created tab if needed
+          }
+        );
+
+        // chrome.tabs.sendMessage(tab.id, {
+        //   type: 'NEW_PROMPT',
+        // });
       } else {
         console.error('No active tab found.');
       }
