@@ -10,18 +10,27 @@ class BackgroundScript {
   addContextMenu() {
     chrome.runtime.onInstalled.addListener(() => {
       chrome.contextMenus.create({
-        id: 'contextMenu',
         title: 'Ask AI',
+        id: 'basic',
+        contexts: ['selection'],
+      });
+
+      chrome.contextMenus.create({
+        title: 'Ask AI with Saved Text',
+        id: 'saved',
         contexts: ['selection'],
       });
     });
   }
-
   addContextMenuEventListener() {
     chrome.contextMenus.onClicked.addListener((info, tab) => {
-      console.log('GOT IT');
-      this.text = info.selectionText;
-      this.sendChatgptPrompt();
+      if (info.menuItemId === 'basic') {
+        this.text = info.selectionText;
+        this.sendChatgptPrompt();
+      } else {
+        // do later
+      }
+      console.log(info);
     });
   }
 
