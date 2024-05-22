@@ -1,8 +1,28 @@
 class BackgroundScript {
   constructor() {
+    this.addContextMenu(); // Call the addContextMenu method
     this.addButtonEventListener();
     this.addClearTextListener();
     this.addGetPromptListener();
+    this.addContextMenuEventListener();
+  }
+
+  addContextMenu() {
+    chrome.runtime.onInstalled.addListener(() => {
+      chrome.contextMenus.create({
+        id: 'contextMenu',
+        title: 'Ask AI',
+        contexts: ['selection'],
+      });
+    });
+  }
+
+  addContextMenuEventListener() {
+    chrome.contextMenus.onClicked.addListener((info, tab) => {
+      console.log('GOT IT');
+      this.text = info.selectionText;
+      this.sendChatgptPrompt();
+    });
   }
 
   addButtonEventListener() {
@@ -17,17 +37,12 @@ class BackgroundScript {
   sendChatgptPrompt() {
     this.getActiveTabInformation((tab) => {
       if (tab) {
-        // Open an invisible tab
         chrome.tabs.create(
           { url: 'https://chat.openai.com', active: true },
           (tab) => {
             // Perform actions on the newly created tab if needed
           }
         );
-
-        // chrome.tabs.sendMessage(tab.id, {
-        //   type: 'NEW_PROMPT',
-        // });
       } else {
         console.error('No active tab found.');
       }
