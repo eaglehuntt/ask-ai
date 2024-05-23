@@ -27,13 +27,9 @@ TODO:
 */
 
 class ContentScript {
-  private gptButtonContainer: HTMLDivElement | undefined;
-  private gptButton: HTMLImageElement | undefined;
   private currentUrl: string | undefined;
 
   constructor() {
-    this.addNewGptPromptListener();
-
     this.currentUrl = window.location.href;
     this.setAction();
 
@@ -41,22 +37,21 @@ class ContentScript {
     setInterval(() => {
       this.checkUrlChange();
     }, 500);
-
-    console.log('Working... kind of');
   }
 
   private async setAction() {
     // Refactor
 
-    setTimeout(() => {
-      this.addGptButton();
-    }, 1000);
+    // setTimeout(() => {
+    //   this.addGptButton();
+    // }, 1000);
 
     let dynamicElement: any;
 
     if (window.location.href !== this.currentUrl) {
       this.currentUrl = window.location.href;
-    } else if (window.location.href.includes('chat.openai.com')) {
+    } else if (window.location.href.includes('chatgpt.com')) {
+      console.log('pasting');
       await this.pasteGptPrompt();
     }
   }
@@ -65,17 +60,6 @@ class ContentScript {
     if (window.location.href !== this.currentUrl) {
       this.setAction();
     }
-  }
-
-  private addNewGptPromptListener() {
-    chrome.runtime.onMessage.addListener((message, sender, response) => {
-      const { type, text } = message;
-      console.log('got new prompt message');
-      if (type === 'NEW_PROMPT') {
-        console.log('this.sendGptPrompt');
-        this.sendGptPrompt();
-      }
-    });
   }
 
   private async pasteGptPrompt(): Promise<void> {
@@ -143,7 +127,7 @@ class ContentScript {
               // chrome.runtime.sendMessage({ type: 'CLEAR_TEXT' });
               setTimeout(() => {
                 let x: any = document.getElementsByClassName(
-                  'absolute bottom-1.5 right-2 rounded-lg border border-black bg-black p-0.5 text-white transition-colors enabled:bg-black disabled:text-gray-400 disabled:opacity-10 dark:border-white dark:bg-white dark:hover:bg-white md:bottom-3 md:right-3'
+                  'mb-1 mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-black text-white transition-colors hover:opacity-70 focus-visible:outline-none focus-visible:outline-black disabled:bg-[#D7D7D7] disabled:text-[#f4f4f4] disabled:hover:opacity-100 dark:bg-white dark:text-black dark:focus-visible:outline-white disabled:dark:bg-token-text-quaternary dark:disabled:text-token-main-surface-secondary'
                 )[0];
                 x.click();
                 resolve(); // Resolve the outer promise when everything is complete
@@ -153,51 +137,6 @@ class ContentScript {
         }, 1000);
       });
     });
-  }
-
-  private addGptButton() {
-    if (!this.gptButtonContainer) {
-      this.gptButtonContainer = document.createElement('div');
-    }
-
-    if (!this.gptButton) {
-      this.gptButton = document.createElement('img');
-      this.gptButton.style.cursor = 'pointer';
-      this.gptButton.src = chrome.runtime.getURL('icon-34.png'); // Update the image URL
-      this.gptButton.className = 'ytp-button ' + 'gpt-button';
-      this.gptButton.title = 'Start a ChatGPT prompt';
-
-      this.gptButton.style.position = 'fixed';
-      this.gptButton.style.top = '10px';
-      this.gptButton.style.left = '10px';
-      this.gptButton.style.zIndex = '9999';
-      this.gptButton.style.width = '50px';
-    }
-
-    if (!this.gptButtonContainer.contains(this.gptButton)) {
-      this.gptButtonContainer.appendChild(this.gptButton);
-
-      if (
-        this.currentUrl &&
-        !this.currentUrl.includes('https://chat.openai.com/')
-      ) {
-        document.body.appendChild(this.gptButtonContainer);
-      }
-
-      this.gptButton.addEventListener('click', () => {
-        console.log('clicked');
-        // You can also send a message to the background script if needed
-        chrome.runtime.sendMessage({
-          type: 'GPT_BUTTON_CLICKED',
-          text: 'whats 9+10?',
-        });
-      });
-    }
-  }
-
-  private sendGptPrompt() {
-    // Open a new tab with your target URL
-    // const newTab = window.open('https://chat.openai.com/', '_blank');
   }
 }
 
