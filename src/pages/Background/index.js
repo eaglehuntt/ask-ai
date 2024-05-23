@@ -1,6 +1,6 @@
 class BackgroundScript {
   constructor() {
-    this.addContextMenu(); // Call the addContextMenu method
+    this.addContextMenu();
     this.addButtonEventListener();
     this.addClearTextListener();
     this.addGetPromptListener();
@@ -18,6 +18,12 @@ class BackgroundScript {
       chrome.contextMenus.create({
         title: 'Ask AI with Saved Text',
         id: 'saved',
+        contexts: ['selection'],
+      });
+
+      chrome.contextMenus.create({
+        title: 'Manage Recipes',
+        id: 'settings',
         contexts: ['selection'],
       });
     });
@@ -48,9 +54,7 @@ class BackgroundScript {
       if (tab) {
         chrome.tabs.create(
           { url: 'https://chat.openai.com', active: true },
-          (tab) => {
-            // Perform actions on the newly created tab if needed
-          }
+          (tab) => {}
         );
       } else {
         console.error('No active tab found.');
@@ -84,5 +88,4 @@ class BackgroundScript {
     });
   }
 }
-
 const bg = new BackgroundScript();
