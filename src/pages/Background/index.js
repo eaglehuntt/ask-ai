@@ -22,7 +22,7 @@ class BackgroundScript {
       });
 
       chrome.contextMenus.create({
-        title: 'Manage Recipes',
+        title: 'Change Saved Text',
         id: 'settings',
         contexts: ['selection'],
       });
