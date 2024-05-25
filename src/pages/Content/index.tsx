@@ -126,13 +126,13 @@ class ContentScript {
               await simulateTyping(response, promptArea);
               // chrome.runtime.sendMessage({ type: 'CLEAR_TEXT' });
               setTimeout(() => {
-                let x: any = document.getElementsByClassName(
-                  'mb-1 mr-1 flex h-8 w-8 items-center justify-center rounded-full bg-black text-white transition-colors hover:opacity-70 focus-visible:outline-none focus-visible:outline-black disabled:bg-[#D7D7D7] disabled:text-[#f4f4f4] disabled:hover:opacity-100 dark:bg-white dark:text-black dark:focus-visible:outline-white disabled:dark:bg-token-text-quaternary dark:disabled:text-token-main-surface-secondary'
-                )[0];
-                x.click();
+                let sendButton: any = document.querySelector(
+                  '[data-testid="fruitjuice-send-button"]'
+                );
+                sendButton.click();
                 resolve(); // Resolve the outer promise when everything is complete
               }, 100);
-            }, 1000);
+            }, 2000);
           }
         }, 1000);
       });
