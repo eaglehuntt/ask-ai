@@ -1,31 +1,3 @@
-/*
-ContentScirpt workflow:
-
-  1. When the CS is initialized, a GPT button is created and appends itself to the YouTube toolbar. 
-  
-  2. The CS polls the current tab's URL every 500ms to check if the URL has changed. If so reinitialize the object. The functions are designed in a a way that the CS will not have unexpected behavior (ideally). 
-
-  3. [ GPT_BUTTON_CLICKED ] : Sent when user clicks the GPT button.
-
-  4. [ CLICK_CC_BUTTON ] : Received from BGS.
-
-  5. CS automatically clicks the Closed Captions button in the YouTube toolbar. This causes YouTube to fetch the transcript from the API.
-  
-  6. [ SAFE_FOR_GPT_PROMPT ] : Sent to BGS after we can ensure that YouTube has sent the transcript API request.
-
-  7. [ NEW_GPT_PROMPT ] : Received from BGS once it has parsed the transcript JSON and has it as a string
-
-  8. [ GET_TRANSCRIPT ] : Sent to BGS and waits for its response. 
-  
-  9. Goes to ChatGPT and pastes the response string into the chatbar.
-
-TODO: 
-  - Refactor initializeContentScript, GET_TRANSCRIPT is being called twice
-  - Bug: Sometimes GPT button does not show up in toolbar
-  - expand chatgpt chatbar? (bug?)
-  
-*/
-
 class ContentScript {
   private currentUrl: string | undefined;
 
@@ -33,109 +5,190 @@ class ContentScript {
     this.currentUrl = window.location.href;
     this.setAction();
 
-    // Poll the URL for changes every 500 milliseconds (adjust the interval as needed)
+    // Poll the URL for changes every 500 milliseconds
     setInterval(() => {
       this.checkUrlChange();
     }, 500);
   }
 
+  // This determines the "mode" the content script is in.
+  // Either in standby or paste.
+  // Only does something if currentUrl is chatgpt.com
   private async setAction() {
-    // Refactor
-
-    // setTimeout(() => {
-    //   this.addGptButton();
-    // }, 1000);
-
-    let dynamicElement: any;
-
     if (window.location.href !== this.currentUrl) {
       this.currentUrl = window.location.href;
     } else if (window.location.href.includes('chatgpt.com')) {
       console.log('pasting');
-      await this.pasteGptPrompt();
+      await this.retryPasteGptPrompt();
     }
   }
 
+  // Check url and determine what "mode" to take
   private checkUrlChange() {
     if (window.location.href !== this.currentUrl) {
       this.setAction();
     }
   }
 
-  private async pasteGptPrompt(): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      function simulateTyping(
-        text: string,
-        targetElement: HTMLTextAreaElement
-      ) {
-        return new Promise<void>((resolve, reject) => {
-          async function typeCharacter(char: string, index: number) {
-            setTimeout(function () {
-              targetElement.value += char;
-
-              targetElement.dispatchEvent(
-                new KeyboardEvent('keydown', {
-                  key: char,
-                  keyCode: char.charCodeAt(0),
-                  code: `Key${char.toUpperCase()}`,
-                })
-              );
-
-              targetElement.dispatchEvent(
-                new KeyboardEvent('keypress', {
-                  key: char,
-                  keyCode: char.charCodeAt(0),
-                  code: `Key${char.toUpperCase()}`,
-                })
-              );
-
-              targetElement.dispatchEvent(
-                new KeyboardEvent('input', { bubbles: true })
-              );
-
-              setTimeout(function () {
-                targetElement.dispatchEvent(
-                  new KeyboardEvent('keyup', {
-                    key: char,
-                    keyCode: char.charCodeAt(0),
-                    code: `Key${char.toUpperCase()}`,
-                  })
-                );
-              }, 10);
-
-              if (index + 1 < text.length) {
-                typeCharacter(text[index + 1], index + 1);
-              } else {
-                resolve(); // Resolve the promise when typing is complete
-              }
-            }, 10);
-          }
-
-          typeCharacter(text[0], 0);
-        });
+  // Wrapper method to attempt to paste highlighted text.
+  // If this fails, it will retry for a specified interval.
+  private async retryPasteGptPrompt(retries = 5, interval = 1000) {
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        await this.pasteGptPrompt();
+        return; // Exit if the function succeeds
+      } catch (error) {
+        console.error(`Attempt ${attempt + 1} failed:`, error);
+        if (attempt < retries - 1) {
+          await new Promise((resolve) => setTimeout(resolve, interval));
+        }
       }
+    }
+    console.error(`All ${retries} attempts failed.`);
+  }
 
+  private async pasteGptPrompt(): Promise<void> {
+    /* 
+      This method is the extensions main functionality. It looks sort of complex but can be broken down into 3 main steps:
+
+      1. Get user's highlighted text with Chrome API and get the prompt text area
+      2. Simulate typing the text
+      3. Finally, click the sendButton then resolve the outer promise
+    
+    */
+
+    // Wrap in a promise so we can await this in the retryPastGptPrompt()
+    return new Promise<void>((resolve, reject) => {
+      /* 
+        STEP 1. Get user's highlighted text with Chrome API and get the prompt text area
+      */
+
+      // Use Chrome API to get the user's highlight text from the backgroundScript
       chrome.runtime.sendMessage({ type: 'GET_PROMPT' }, (response) => {
+        if (!response) {
+          console.error('No response received from GET_PROMPT');
+          reject('No response received from GET_PROMPT');
+          return;
+        }
+
+        // Wait for a duration then attempt to get the prompt text area in the HTML. This a workaround because waiting for page load seemed to be unreliable
+
         setTimeout(() => {
+          // Store the prompt area as a TypeScript HTML element
           const promptArea = document.getElementById(
             'prompt-textarea'
           ) as HTMLTextAreaElement;
 
-          if (promptArea) {
-            setTimeout(async () => {
-              await simulateTyping(response, promptArea);
-              // chrome.runtime.sendMessage({ type: 'CLEAR_TEXT' });
-              setTimeout(() => {
-                let sendButton: any = document.querySelector(
-                  '[data-testid="fruitjuice-send-button"]'
-                );
-                sendButton.click();
-                resolve(); // Resolve the outer promise when everything is complete
-              }, 100);
-            }, 2000);
+          // Reject the promise if if do not find the prompt area
+          if (!promptArea) {
+            console.error('Prompt textarea not found');
+            reject('Prompt textarea not found');
+            return;
           }
-        }, 1000);
+
+          /* 
+            STEP 2. Simulate typing the text
+          */
+          setTimeout(async () => {
+            try {
+              await this.simulateTyping(response, promptArea);
+            } catch (error) {
+              console.error('Error during simulateTyping:', error);
+              reject(error);
+              return;
+            }
+
+            // chrome.runtime.sendMessage({ type: 'CLEAR_TEXT' }); // this is only here so I remember the CLEAR_TEXT message in the future
+
+            /* 
+              STEP 3. Click the sendButton then resolve the outer promise
+            */
+            setTimeout(() => {
+              const sendButton = document.querySelector(
+                '[data-testid="fruitjuice-send-button"]'
+              ) as any;
+
+              if (!sendButton) {
+                console.error('Send button not found');
+                reject('Send button not found');
+                return;
+              }
+
+              sendButton.click();
+              resolve();
+
+              // Adjust delays for each step in ms
+            }, 100); // 1. Click sendButton
+          }, 1000); // 2. Simulate typing
+        }, 1000); // 3. Get sendButton
       });
+    });
+  }
+
+  private simulateTyping(text: string, targetElement: HTMLTextAreaElement) {
+    /* 
+
+    I eventually want to refactor this to simulate a "paste" because when there is a large amount of text highlighted the user experience is awful. 
+
+    But, I found the current solution on Stackoverflow  https://stackoverflow.com/questions/596481/is-it-possible-to-simulate-key-press-events-programmatically
+
+    */
+
+    // Return a promise that will be resolved when the typing simulation is complete
+    return new Promise<void>((resolve, reject) => {
+      // Async recursive function to type each character with a delay
+      async function typeCharacter(char: string, index: number) {
+        // Set a timeout to simulate typing delay
+        setTimeout(function () {
+          // Append the character to the target HTML element's value
+          targetElement.value += char;
+
+          // Dispatch a 'keydown' event to simulate pressing a key down
+          targetElement.dispatchEvent(
+            new KeyboardEvent('keydown', {
+              key: char, // Key value
+              keyCode: char.charCodeAt(0), // Key code
+              code: `Key${char.toUpperCase()}`, // Physical key code
+            })
+          );
+
+          // Dispatch a 'keypress' event to simulate key press, confirming we actually pressed it
+          targetElement.dispatchEvent(
+            new KeyboardEvent('keypress', {
+              key: char,
+              keyCode: char.charCodeAt(0),
+              code: `Key${char.toUpperCase()}`,
+            })
+          );
+
+          // Dispatch an 'input' event to simulate text input
+          targetElement.dispatchEvent(
+            new KeyboardEvent('input', { bubbles: true })
+          );
+
+          // Set a short timeout before dispatching the 'keyup' event (keydown and keyup physically cannot occur at the same time)
+          setTimeout(function () {
+            // Dispatch a 'keyup' event to simulate releasing a key
+            targetElement.dispatchEvent(
+              new KeyboardEvent('keyup', {
+                key: char,
+                keyCode: char.charCodeAt(0),
+                code: `Key${char.toUpperCase()}`,
+              })
+            );
+          }, 10);
+
+          // If there are more characters to type, do a recursive function call
+          if (index + 1 < text.length) {
+            typeCharacter(text[index + 1], index + 1);
+          } else {
+            resolve(); // Resolve the promise when typing is complete
+          }
+        }, 10);
+      }
+
+      // Start typing the first character to start the function call stack
+      typeCharacter(text[0], 0);
     });
   }
 }
