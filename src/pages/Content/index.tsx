@@ -102,19 +102,29 @@ class ContentScript {
 
             /* 
               STEP 3. Click the sendButton then resolve the outer promise
+
+              Currently, chatgpt has 2 different interfaces with alternate data-testid's. It changes depending if the user is logged in or not, so this is a hacky way to fix the bug. 
             */
             setTimeout(() => {
-              const sendButton = document.querySelector(
+              let sendButton = document.querySelector(
                 '[data-testid="fruitjuice-send-button"]'
               ) as any;
 
               if (!sendButton) {
-                console.error('Send button not found');
-                reject('Send button not found');
+                try {
+                  sendButton = document.querySelector(
+                    '[data-testid="send-button"]'
+                  ) as any;
+                  sendButton.click();
+                } catch {
+                  console.error('Send button not found');
+                  reject('Send button not found');
+                }
                 return;
+              } else {
+                sendButton.click();
               }
 
-              sendButton.click();
               resolve();
 
               // Adjust delays for each step in ms
