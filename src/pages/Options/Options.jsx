@@ -41,7 +41,7 @@ const Options = () => {
   return (
     <>
       <div className="container">
-        <h1 id="title">Custom Prompt</h1>
+        <h1 id="title">Edit Recipe</h1>
         <div id="subtitle">
           Tip: This will add a message before your highlighted text is sent to
           AI
