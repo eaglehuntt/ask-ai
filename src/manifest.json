@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Highlight Text To ChatGPT",
+  "name": "Ask AI Highlighted Text",
   "description": "",
   "options_page": "options.html",
   "background": { "service_worker": "background.bundle.js" },
