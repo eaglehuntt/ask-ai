@@ -35,6 +35,11 @@ class BackgroundScript {
         this.sendChatgptPrompt();
       } else if (info.menuItemId === 'settings') {
         chrome.runtime.openOptionsPage();
+      } else if (info.menuItemId === 'saved') {
+        chrome.storage.sync.get(['savedPrompt']).then((result) => {
+          this.text = result.savedPrompt + info.selectionText;
+          this.sendChatgptPrompt();
+        });
       }
       console.log(info);
     });
