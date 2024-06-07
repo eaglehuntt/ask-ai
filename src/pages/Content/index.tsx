@@ -134,15 +134,19 @@ class ContentScript {
       });
     });
   }
+  // The "simulateTyping" function was made by ChatGPT, here is my chat I used to make it
+  // https://chatgpt.com/share/b5195ac2-474c-4e07-8c21-a91dd8e32ab9
 
   private simulateTyping(text: string, targetElement: HTMLTextAreaElement) {
-    /* 
-
-    I eventually want to refactor this to simulate a "paste" because when there is a large amount of text highlighted the user experience is awful. 
-
-    But, I found the current solution on Stackoverflow  https://stackoverflow.com/questions/596481/is-it-possible-to-simulate-key-press-events-programmatically
-
-    */
+    // Simulate pasting the remaining text
+    const simulatePaste = (str: string, element: HTMLTextAreaElement) => {
+      element.value += str;
+      const event = new Event('input', {
+        bubbles: true,
+        cancelable: true,
+      });
+      element.dispatchEvent(event);
+    };
 
     // Return a promise that will be resolved when the typing simulation is complete
     return new Promise<void>((resolve, reject) => {
@@ -188,11 +192,15 @@ class ContentScript {
             );
           }, 10);
 
-          // If there are more characters to type, do a recursive function call
-          if (index + 1 < text.length) {
+          // If there are more characters to type and we haven't reached the 10th character
+          if (index + 1 < text.length && index < 9) {
             typeCharacter(text[index + 1], index + 1);
           } else {
-            resolve(); // Resolve the promise when typing is complete
+            // If we have typed the first 10 characters, paste the rest
+            if (index === 9) {
+              simulatePaste(text.slice(10), targetElement);
+            }
+            resolve(); // Resolve the promise when typing and pasting is complete
           }
         }, 10);
       }
