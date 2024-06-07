@@ -80,9 +80,11 @@ const Options = () => {
             />
           </div>
         </div>
-        <h3>Preview:</h3>
-        <div id={`saved-prompt`} className={fade ? 'fade-in' : 'fade-out'}>
-          {savedPrompt ? savedPrompt + ' {Highlighted text}' : ''}
+        <div className="preview-container">
+          <h3>Preview:</h3>
+          <div id={`saved-prompt`} className={fade ? 'fade-in' : 'fade-out'}>
+            {savedPrompt ? savedPrompt + ' {Highlighted text}' : ''}
+          </div>
         </div>
       </div>
     </>
