@@ -49,29 +49,47 @@ html {
 .saved-message {
   position: absolute;
   top: 50%;
-  right: -20%; /* Adjust as necessary */
+  right: -25%; /* Adjust as necessary */
   transform: translateY(-50%);
   font-size: 1em;
-  opacity: 0;
   display: flex;
   align-items: center;
   justify-content: space;
-  width: 20%;
-}
-
-.fade {
-  transition: 0.3s ease-in;
+  width: 25%;
+  margin-left: 5%;
 }
 
 .fade-in {
-  opacity: 1;
+  animation: fadeIn 0.5s ease-in forwards;
 }
 
 .fade-out {
-  opacity: 0;
+  animation: fadeOut 0.5s ease-out forwards;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 #saved-prompt {
   padding-top: 8%;
-  max-width: 600px;
+  max-width: 350px;
+}
+
+.save-button {
+  margin-top: 5%;
+  margin-bottom: 10%;
 }

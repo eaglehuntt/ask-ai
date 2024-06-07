@@ -1,38 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import './Options.css';
 import { Checkmark } from 'react-checkmark';
+import ReactiveButton from 'reactive-button';
 
 const Options = () => {
   const [textField, setTextField] = useState('');
-  const [savedMessage, setSavedMessage] = useState(false);
   const [savedPrompt, setSavedPrompt] = useState('');
+  const [saveButtonState, setSaveButtonState] = useState('idle');
+  const [fade, setFade] = useState(true); // State to control the fade effect
 
-  // Fetch saved prompt on page load
   useEffect(() => {
-    // chrome.runtime.sendMessage({ type: 'GET_SAVED_PROMPT' }, (response) => {
-    //   if (response && response.prompt) {
-    //     setSavedPrompt(response.prompt);
-    //   } else {
-    //     setSavedPrompt('No saved prompt');
-    //   }
-    // });
+    restoreOptions();
+    getSavedPrompt();
   }, []);
 
-  useEffect(() => {
-    if (textField === '') return;
+  const saveOptions = () => {
+    setFade(false); // Start the fade-out effect
+    chrome.storage.sync.set({ savedPrompt: textField }, () => {
+      setTimeout(() => {
+        setSaveButtonState('success');
+        restoreOptions();
+        getSavedPrompt();
+        setFade(true); // Start the fade-in effect
+      }, 1000);
+    });
+  };
 
-    const timer = setTimeout(() => {
-      setSavedMessage(true);
-      setSavedPrompt(textField); // Update the saved prompt with the textField value
-      // chrome.runtime.sendMessage({ type: 'SAVE_PROMPT', prompt: textField });
-    }, 1000);
+  const restoreOptions = () => {
+    chrome.storage.sync.get({ savedPrompt: '' }, (items) => {
+      setTextField(items.savedPrompt);
+    });
+  };
 
-    // Cleanup function
-    return () => {
-      clearTimeout(timer);
-      setSavedMessage(false);
-    };
-  }, [textField]);
+  const getSavedPrompt = () => {
+    chrome.storage.sync.get(['savedPrompt'], (result) => {
+      setSavedPrompt(result.savedPrompt);
+    });
+  };
+
+  const handleSaveButton = () => {
+    setSaveButtonState('loading');
+    saveOptions();
+  };
 
   const handleTextFieldChange = (event) => {
     setTextField(event.target.value);
@@ -52,19 +61,27 @@ const Options = () => {
             type="text"
             value={textField}
             onChange={handleTextFieldChange}
-            rows={3} // This attribute is not necessary but can help with spacing
+            rows={3}
           />
-          <div
-            className={`saved-message fade ${
-              savedMessage ? 'fade-in' : 'fade-out'
-            }`}
-          >
-            <Checkmark size="medium" color="green"></Checkmark>
-            <p>Saved</p>
+          <div className="save-button">
+            <ReactiveButton
+              size="normal"
+              onClick={handleSaveButton}
+              idleText="Save"
+              loadingText="Loading"
+              successText={'Success'}
+              buttonState={saveButtonState} // Pass the button state as a prop
+              messageDuration={1000}
+              outline={true}
+              color="blue"
+              rounded={true}
+              block={true}
+              className=""
+            />
           </div>
         </div>
         <h3>Preview:</h3>
-        <div id={`saved-prompt`} className={`fade`}>
+        <div id={`saved-prompt`} className={fade ? 'fade-in' : 'fade-out'}>
           {savedPrompt ? savedPrompt + ' {Highlighted text}' : ''}
         </div>
       </div>

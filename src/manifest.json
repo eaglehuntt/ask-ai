@@ -4,7 +4,7 @@
   "description": "",
   "options_page": "options.html",
   "background": { "service_worker": "background.bundle.js" },
-  "permissions": ["activeTab", "tabs", "contextMenus"],
+  "permissions": ["activeTab", "tabs", "contextMenus", "storage"],
   "host_permissions": ["https://*.youtube.com/*"],
   "action": {
     "default_popup": "popup.html",

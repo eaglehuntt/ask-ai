@@ -1,0 +1,4 @@
+.reactive-btn:not([data-button-state='idle']) .progress {
+  transform: translateX(0%);
+  transition: transform 1s cubic-bezier(0.59, 0.01, 0.41, 0.99); /* Adjust the duration here */
+}
