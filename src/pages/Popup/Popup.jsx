@@ -1,7 +1,7 @@
 import React from 'react';
 import Options from '../Options/Options';
 import '../Options/Options.css';
-import './popup.css';
+import './Popup.css';
 
 const Popup = () => {
   return (
