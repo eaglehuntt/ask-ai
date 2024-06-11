@@ -7,6 +7,21 @@ class BackgroundScript {
     this.addContextMenuEventListener(); // Handle context menu item clicks
   }
 
+  sanitizeText(text) {
+    // Replace HTML special characters with their respective HTML entities
+    text = text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+    // Strip any HTML tags
+    text = text.replace(/<[^>]*>?/gm, '');
+
+    return text;
+  }
+
   // Create context menu items when the extension is installed
   addContextMenu() {
     chrome.runtime.onInstalled.addListener(() => {
@@ -35,7 +50,7 @@ class BackgroundScript {
     chrome.contextMenus.onClicked.addListener((info, tab) => {
       if (info.menuItemId === 'basic') {
         // If the 'Text Only' item was clicked
-        this.text = info.selectionText; // Store the selected text
+        this.text = this.sanitizeText(info.selectionText); // Store the sanitized selected text
         this.sendChatgptPrompt(); // Send the stored text to ChatGPT
       } else if (info.menuItemId === 'settings') {
         // If the 'Settings' item was clicked
@@ -43,7 +58,8 @@ class BackgroundScript {
       } else if (info.menuItemId === 'saved') {
         // If the 'With Recipe' item was clicked
         chrome.storage.sync.get(['savedPrompt']).then((result) => {
-          this.text = result.savedPrompt + info.selectionText; // Append selected text to saved prompt
+          this.text =
+            result.savedPrompt + ' ' + this.sanitizeText(info.selectionText); // Append sanitized selected text to saved prompt
           this.sendChatgptPrompt(); // Send the combined text to ChatGPT
         });
       }
